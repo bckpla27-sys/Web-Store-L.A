@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DRAG RACE L.A STORE</title>
+    <meta name="description" content="Toko lisensi otomatis 24/7 untuk Drag Race Pro+ dengan verifikasi pembayaran DANA, generator kunci cepat KEY-XXXXXXXXXXX, dan dashboard sinkronisasi Cloud Database / Firebase." />
+    <meta property="og:title" content="DRAG RACE L.A STORE" />
+    <meta property="og:description" content="Toko lisensi otomatis 24/7 untuk Drag Race Pro+ dengan verifikasi pembayaran DANA, generator kunci cepat KEY-XXXXXXXXXXX, dan dashboard sinkronisasi Cloud Database / Firebase." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Outfit:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <script>
+      // Suppress benign Vite dev server WebSocket disconnect errors in preview environment
+      window.addEventListener('error', function (e) {
+        if (
+          (e.filename && (e.filename.includes('@vite/client') || e.filename.includes('vite'))) ||
+          (e.message && (e.message.includes('WebSocket') || e.message.includes('@vite/client')))
+        ) {
+          e.preventDefault();
+          e.stopImmediatePropagation();
+        }
+      });
+      window.addEventListener('unhandledrejection', function (e) {
+        var reason = e.reason ? String(e.reason.message || e.reason) : '';
+        if (reason.includes('WebSocket') || reason.includes('vite')) {
+          e.preventDefault();
+          e.stopImmediatePropagation();
+        }
+      });
+    </script>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

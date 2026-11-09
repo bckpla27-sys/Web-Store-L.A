@@ -1,0 +1,6 @@
+{
+  "name": "DRAG RACE L.A STORE",
+  "description": "Toko lisensi otomatis 24/7 untuk Drag Race Pro+ dengan verifikasi pembayaran DANA, generator kunci cepat KEY-XXXXXXXXXXX, dan dashboard sinkronisasi Cloud Database / Firebase.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
