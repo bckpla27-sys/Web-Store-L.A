@@ -30,7 +30,7 @@ export default function App() {
   const [isOwnerAuthenticated, setIsOwnerAuthenticated] =
     useState<boolean>(false);
   const [activeBuyerTab, setActiveBuyerTab] = useState<
-    'buy' | 'status' | 'features' | 'giveaway'
+    'download' | 'buy' | 'status' | 'features' | 'giveaway'
   >('buy');
 
   const secretClickTimestampsRef = useRef<number[]>([]);

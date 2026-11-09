@@ -19,6 +19,24 @@ import {
   Gift,
   Send,
   Database,
+  Timer,
+  History,
+  Video,
+  LineChart,
+  Settings as SettingsIcon,
+  User,
+  Eye,
+  Play,
+  Pause,
+  RotateCcw,
+  X,
+  Gauge,
+  Maximize2,
+  Activity,
+  Layers,
+  Download,
+  Smartphone,
+  ShieldAlert,
 } from 'lucide-react';
 import {
   BuyerOrder,
@@ -48,8 +66,10 @@ interface BuyerStorefrontProps {
   settings: StoreSettings;
   orders: BuyerOrder[];
   giveawayParticipants: GiveawayParticipant[];
-  activeTab: 'buy' | 'status' | 'features' | 'giveaway';
-  onSelectTab: (tab: 'buy' | 'status' | 'features' | 'giveaway') => void;
+  activeTab: 'download' | 'buy' | 'status' | 'features' | 'giveaway';
+  onSelectTab: (
+    tab: 'download' | 'buy' | 'status' | 'features' | 'giveaway'
+  ) => void;
   onOrderCreatedOrUpdated: (order: BuyerOrder) => Promise<BuyerOrder>;
   onRefreshState: () => Promise<void>;
   onBrandTitleClick: () => void;
@@ -121,7 +141,7 @@ export const BuyerStorefront: React.FC<BuyerStorefrontProps> = ({
   const handleGiveawaySubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!gwPreviewBase64) {
-      setGwError('Silakan unggah screenshot bukti follow & like.');
+      setGwError('Silakan unggah foto bukti follow & like.');
       return;
     }
     const cleanName = gwFullName.trim();
@@ -180,6 +200,21 @@ export const BuyerStorefront: React.FC<BuyerStorefrontProps> = ({
   const [keyCopied, setKeyCopied] = useState<boolean>(false);
   const [allDetailsCopied, setAllDetailsCopied] = useState<boolean>(false);
 
+  // 5. Detail Fitur APK state & lightbox modal
+  const [selectedFeatureFilter, setSelectedFeatureFilter] = useState<
+    'all' | 'timer' | 'histori' | 'video' | 'grafik' | 'setting' | 'profile'
+  >('all');
+  const [enlargedMedia, setEnlargedMedia] = useState<{
+    src: string;
+    title: string;
+    type?: 'image' | 'video';
+  } | null>(null);
+  const [activeGrafikTab, setActiveGrafikTab] = useState<number>(0);
+  const [activeSettingTab, setActiveSettingTab] = useState<number>(0);
+  const [activeTimerTab, setActiveTimerTab] = useState<number>(0);
+  const telemetryVideoRef = useRef<HTMLVideoElement>(null);
+  const [isVideoPlaying, setIsVideoPlaying] = useState<boolean>(false);
+
 
   // Sync searchedOrder when global orders state updates
   useEffect(() => {
@@ -230,7 +265,9 @@ export const BuyerStorefront: React.FC<BuyerStorefrontProps> = ({
   const handleSubmitPaymentProof = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!previewBase64) {
-      setUploadError('Silakan pilih file foto screenshot bukti transfer terlebih dahulu.');
+      setUploadError(
+        'Silakan pilih file foto bukti transfer terlebih dahulu.'
+      );
       return;
     }
 
@@ -471,11 +508,24 @@ export const BuyerStorefront: React.FC<BuyerStorefrontProps> = ({
             DRAG RACE L.A STORE
           </h1>
           <p className="text-sm sm:text-base text-zinc-300 leading-relaxed max-w-2xl">
-            Pilih paket lisensi resmi Drag Race Pro+, bayar via QRIS All Payment atau DANA, unggah screenshot bukti pembayaran.
+            Pilih paket lisensi resmi Drag Race Pro+, bayar via QRIS All Payment atau DANA, unggah bukti pembayaran.
           </p>
 
-          {/* Tab Navigation Switcher Ringkas (4 Menu Sesuai Urutan) */}
+          {/* Tab Navigation Switcher Ringkas (Menu Sesuai Urutan dengan Download APK di Atas Beli Lisensi) */}
           <div className="pt-4 flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() => onSelectTab('download')}
+              className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                activeTab === 'download'
+                  ? 'bg-[#7C3AED] text-white shadow-lg shadow-[#7C3AED]/20 border border-[#7C3AED]'
+                  : 'bg-[#121212] text-zinc-300 border border-[#2E2E38] hover:border-[#7C3AED] hover:text-white'
+              }`}
+            >
+              <Download className="w-4 h-4 text-[#A78BFA]" />
+              <span>Download APK</span>
+            </button>
+
             <button
               type="button"
               onClick={() => onSelectTab('buy')}
@@ -530,6 +580,154 @@ export const BuyerStorefront: React.FC<BuyerStorefrontProps> = ({
           </div>
         </div>
       </section>
+
+      {/* ================= TAB 0: DOWNLOAD APK (MENU DOWNLOAD APLIKASI) ================= */}
+      {activeTab === 'download' && (
+        <section className="bg-[#1E1E24] border border-[#2E2E38] rounded-xl p-6 sm:p-10 space-y-8 animate-fade-in">
+          {/* Header Download */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#2E2E38] pb-6">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-[#7C3AED]/20 border border-[#7C3AED]/40 flex items-center justify-center text-[#A78BFA] shrink-0">
+                <Download className="w-6 h-6" />
+              </div>
+              <div>
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 text-[10px] font-extrabold uppercase tracking-wider mb-1 border border-emerald-500/30">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span>
+                    RILIS RESMI TERBARU · {settings.apkRelease?.version || 'v2.7.0'}
+                  </span>
+                </div>
+                <h2 className="text-xl sm:text-2xl font-bold text-white font-display">
+                  Download DRAG RACE L.A APK
+                </h2>
+                <p className="text-xs sm:text-sm text-zinc-400 mt-1">
+                  Aplikasi telemetri balap digital &amp; drag meter presisi tinggi untuk perangkat Android.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => onSelectTab('buy')}
+                className="px-4 py-2 rounded-lg bg-[#7C3AED] hover:bg-[#6D28D9] text-white text-xs font-bold transition-all shadow-lg shadow-[#7C3AED]/20 cursor-pointer"
+              >
+                Beli Lisensi Sekarang
+              </button>
+            </div>
+          </div>
+
+          {/* Kartu Unduh Utama */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Card 1: Direct Server Download */}
+            <div className="lg:col-span-2 bg-[#121212] border border-[#2E2E38] rounded-xl p-6 space-y-6 flex flex-col justify-between">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <Smartphone className="w-5 h-5 text-[#A78BFA]" />
+                    <span className="font-bold text-white text-sm">
+                      Installer Resmi Android (.APK)
+                    </span>
+                  </div>
+                  <span className="text-[11px] font-mono text-zinc-400 bg-[#1E1E24] px-2.5 py-1 rounded border border-[#2E2E38]">
+                    Ukuran: {settings.apkRelease?.fileSize || '48.6 MB'}
+                  </span>
+                </div>
+
+                <p className="text-xs text-zinc-300 leading-relaxed">
+                  Unduh langsung file APK installer versi rilis resmi{' '}
+                  <strong className="text-white">
+                    {settings.apkRelease?.fileName || 'DragRaceLA_v2.7_Release.apk'}
+                  </strong>{' '}
+                  dari server DRAG RACE L.A STORE. Bebas malware, tanpa iklan, dan kompatibel dengan sensor GPS bawaan ponsel. Link unduhan selalu otomatis diperbarui ke versi rilis paling baru.
+                </p>
+
+                {/* Catatan Pembaruan (Changelog) jika diisi Owner */}
+                {settings.apkRelease?.changelog && (
+                  <div className="bg-[#18181E] border border-[#2E2E38] rounded-lg p-3 text-xs text-zinc-300 space-y-1">
+                    <span className="text-[#A78BFA] font-bold text-[11px] block flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>Catatan Update ({settings.apkRelease.version}):</span>
+                    </span>
+                    <p className="text-zinc-400 leading-relaxed text-[11px]">
+                      {settings.apkRelease.changelog}
+                    </p>
+                  </div>
+                )}
+
+                {/* Spesifikasi Ringkas */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 text-[11px] font-mono">
+                  <div className="bg-[#18181E] p-2.5 rounded-lg border border-[#2E2E38]">
+                    <span className="text-zinc-500 block text-[10px]">Versi APK</span>
+                    <span className="text-zinc-200 font-bold">
+                      {settings.apkRelease?.version || 'v2.7.0'} Pro
+                    </span>
+                  </div>
+                  <div className="bg-[#18181E] p-2.5 rounded-lg border border-[#2E2E38]">
+                    <span className="text-zinc-500 block text-[10px]">Min. OS</span>
+                    <span className="text-zinc-200 font-bold">Android 8.0+</span>
+                  </div>
+                  <div className="bg-[#18181E] p-2.5 rounded-lg border border-[#2E2E38]">
+                    <span className="text-zinc-500 block text-[10px]">Arsitektur</span>
+                    <span className="text-zinc-200 font-bold">ARM64 / v7a</span>
+                  </div>
+                  <div className="bg-[#18181E] p-2.5 rounded-lg border border-[#2E2E38]">
+                    <span className="text-zinc-500 block text-[10px]">Keamanan</span>
+                    <span className="text-emerald-400 font-bold">Terverifikasi</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="pt-4 border-t border-[#2E2E38]">
+                <a
+                  href={
+                    settings.apkRelease?.downloadUrl ||
+                    '/downloads/DragRaceLA_latest.apk'
+                  }
+                  download={
+                    settings.apkRelease?.fileName || 'DragRaceLA_latest.apk'
+                  }
+                  className="w-full inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl bg-[#7C3AED] hover:bg-[#6D28D9] text-white text-sm font-bold shadow-lg shadow-[#7C3AED]/25 transition-all cursor-pointer group text-center"
+                >
+                  <Download className="w-4 h-4 group-hover:translate-y-0.5 transition-transform" />
+                  <span>
+                    Download APK {settings.apkRelease?.version || 'Terbaru'} Langsung (Server Utama)
+                  </span>
+                </a>
+              </div>
+            </div>
+
+            {/* Card 2: Panduan Instalasi 3 Langkah */}
+            <div className="bg-[#121212] border border-[#2E2E38] rounded-xl p-6 space-y-4 flex flex-col justify-between">
+              <div>
+                <h3 className="text-sm font-bold text-white flex items-center gap-2 mb-3">
+                  <ShieldCheck className="w-4 h-4 text-[#A78BFA]" />
+                  <span>Panduan Instalasi APK</span>
+                </h3>
+                <ol className="space-y-3 text-xs text-zinc-300 leading-relaxed list-decimal list-inside">
+                  <li className="pl-1">
+                    <strong className="text-white">Unduh APK</strong>: Klik tombol unduh di sebelah kiri dan tunggu hingga berkas selesai tersimpan.
+                  </li>
+                  <li className="pl-1">
+                    <strong className="text-white">Izinkan Instalasi</strong>: Buka notifikasi unduhan. Jika sistem meminta izin, pilih <em>Setelan</em> lalu centang <em>"Izinkan dari sumber ini"</em>.
+                  </li>
+                  <li className="pl-1">
+                    <strong className="text-white">Buka &amp; Login Kunci Cepat</strong>: Buka aplikasi, lalu masukkan Username &amp; Kunci Cepat lisensi Anda dari menu Cek Status.
+                  </li>
+                </ol>
+              </div>
+
+              <div className="bg-[#1A1A22] border border-[#2E2E38] rounded-lg p-3 text-[11px] text-zinc-400 space-y-1 mt-4">
+                <span className="text-[#A78BFA] font-bold block">💡 Butuh Kunci Lisensi?</span>
+                <span>
+                  Beli paket 3 Jam, 10 Jam, 24 Jam, Permanent, atau Permanent VIP di menu <strong>Beli Lisensi Baru</strong> untuk mendapatkan akses login resmi tanpa kedaluwarsa.
+                </span>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ================= TAB 1: BELI LISENSI BARU ================= */}
       {activeTab === 'buy' && (
@@ -710,13 +908,13 @@ export const BuyerStorefront: React.FC<BuyerStorefrontProps> = ({
                 </div>
               </div>
 
-              {/* Form Unggah Screenshot Bukti & Tombol Kirim */}
+              {/* Form Unggah Foto Bukti & Tombol Kirim */}
               <form onSubmit={handleSubmitPaymentProof} className="space-y-4">
                 <label
                   htmlFor="payment-proof-upload"
                   className="block text-xs font-semibold text-zinc-200"
                 >
-                  Unggah Screenshot Bukti Pembayaran (Wajib)
+                  Unggah Foto Bukti Pembayaran (Wajib)
                 </label>
 
                 <div className="border border-dashed border-[#2E2E38] hover:border-[#7C3AED] rounded-xl p-5 bg-[#121212] text-center transition-colors">
@@ -736,7 +934,7 @@ export const BuyerStorefront: React.FC<BuyerStorefrontProps> = ({
                         htmlFor="payment-proof-upload"
                         className="text-xs text-zinc-400 hover:text-white underline cursor-pointer"
                       >
-                        Ganti Foto Screenshot
+                        Ganti Foto Bukti Pembayaran
                       </label>
                     </div>
                   ) : (
@@ -854,13 +1052,13 @@ export const BuyerStorefront: React.FC<BuyerStorefrontProps> = ({
                 </div>
               </div>
 
-              {/* Peringatan Penting Screenshot / Catat Kode */}
+              {/* Peringatan Penting Simpan / Catat Kode Antrean */}
               <div className="bg-amber-950/50 border border-amber-600/70 rounded-xl p-4 text-xs text-amber-200 leading-relaxed space-y-1.5 shadow-md">
                 <p className="font-bold text-amber-300 uppercase tracking-wide">
                   ⚠️ PERINGATAN PENTING:
                 </p>
                 <p>
-                  Harap salin, catat, atau <strong>screenshot</strong> nomor antrean Anda (<strong className="font-mono text-white">{newlyCreatedTicket.queueNumber}</strong>). Jika Anda menutup atau me-refresh web ini, Anda memerlukan nomor antrean tersebut untuk mengecek status pesanan di menu <strong>Cek Status Pembelian</strong>.
+                  Harap salin atau catat nomor antrean Anda (<strong className="font-mono text-white">{newlyCreatedTicket.queueNumber}</strong>). Jika Anda menutup atau me-refresh web ini, Anda memerlukan nomor antrean tersebut untuk mengecek status pesanan di menu <strong>Cek Status Pembelian</strong>.
                 </p>
               </div>
 
@@ -1323,90 +1521,814 @@ export const BuyerStorefront: React.FC<BuyerStorefrontProps> = ({
       {/* ================= TAB 3: DETAIL FITUR APK ================= */}
       {activeTab === 'features' && (
         <section className="space-y-8 animate-fade-in">
+          {/* Header Banner */}
           <div className="bg-[#1E1E24] border border-[#2E2E38] rounded-xl p-6 sm:p-10 space-y-6">
-            <div>
-              <h2 className="text-xl sm:text-2xl font-bold text-white font-display">
-                Detail Fitur Unggulan APK Drag Race L.A
-              </h2>
-              <p className="text-xs sm:text-sm text-zinc-400 mt-1">
-                Jelajahi fitur profesional dan performa optimal yang dirancang khusus untuk pecinta balap drag race.
-              </p>
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#7C3AED]/20 border border-[#7C3AED]/40 text-xs font-bold text-[#A78BFA] uppercase tracking-wider mb-2">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Katalog Fitur Resmi Drag Race L.A Pro+</span>
+                </div>
+                <h2 className="text-xl sm:text-3xl font-bold text-white font-display">
+                  Detail Fitur Unggulan APK Drag Race L.A
+                </h2>
+                <p className="text-xs sm:text-sm text-zinc-400 mt-1 max-w-2xl leading-relaxed">
+                  Semua instrumen telemetri, timer presisi sensor 200Hz, HUD video overlay, grafik komparasi dinamo, hingga kalibrasi alat ukur dikembangkan khusus untuk mekanik dan pembalap profesional.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-[#121212] border border-[#2E2E38] text-zinc-300">
+                  Total <strong className="text-[#A78BFA]">6 Fitur Utama</strong>
+                </span>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
-              <div className="bg-[#121212] border border-[#2E2E38] rounded-xl p-6 space-y-4">
-                <div className="w-12 h-12 rounded-xl bg-[#7C3AED]/20 border border-[#7C3AED]/40 flex items-center justify-center text-[#A78BFA]">
-                  <KeyRound className="w-6 h-6" />
-                </div>
-                <h3 className="text-base font-bold text-white font-display">
-                  1. Sistem Kunci Cepat (KEY-XXXXXXXXXXX)
-                </h3>
-                <p className="text-xs text-zinc-300 leading-relaxed">
-                  Aktivasi instan tanpa perlu akun server berbelit-belit. Cukup masukkan kode lisensi cepat Anda yang digenerate otomatis setelah pembayaran dikonfirmasi owner.
-                </p>
-                <div className="bg-[#1E1E24] border border-[#2E2E38] rounded-lg p-4 text-center border-dashed border-[#7C3AED]/30">
-                  <p className="text-[11px] text-zinc-400 uppercase font-mono">Placeholder Screenshot Fitur Login</p>
-                  <div className="h-32 flex items-center justify-center text-xs text-zinc-500 font-mono">
-                    [ Area Screenshot Aplikasi #1 ]
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-[#121212] border border-[#2E2E38] rounded-xl p-6 space-y-4">
-                <div className="w-12 h-12 rounded-xl bg-[#7C3AED]/20 border border-[#7C3AED]/40 flex items-center justify-center text-[#A78BFA]">
-                  <Database className="w-6 h-6" />
-                </div>
-                <h3 className="text-base font-bold text-white font-display">
-                  2. Cloud Database Realtime 24/7
-                </h3>
-                <p className="text-xs text-zinc-300 leading-relaxed">
-                  Semua data antrean dan status lisensi tersinkronisasi langsung secara real-time ke Cloud Database / Firebase, memastikan keamanan dan keandalan penuh.
-                </p>
-                <div className="bg-[#1E1E24] border border-[#2E2E38] rounded-lg p-4 text-center border-dashed border-[#7C3AED]/30">
-                  <p className="text-[11px] text-zinc-400 uppercase font-mono">Placeholder Screenshot Dashboard</p>
-                  <div className="h-32 flex items-center justify-center text-xs text-zinc-500 font-mono">
-                    [ Area Screenshot Aplikasi #2 ]
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-[#121212] border border-[#2E2E38] rounded-xl p-6 space-y-4">
-                <div className="w-12 h-12 rounded-xl bg-[#7C3AED]/20 border border-[#7C3AED]/40 flex items-center justify-center text-[#A78BFA]">
-                  <Sparkles className="w-6 h-6" />
-                </div>
-                <h3 className="text-base font-bold text-white font-display">
-                  3. Pengaturan Rasio Gigi &amp; Setting Pembalap
-                </h3>
-                <p className="text-xs text-zinc-300 leading-relaxed">
-                  Fitur lengkap untuk menyetel rasio gigi final gear, tekanan ban, timing shift lampu start, hingga telemetri performa motor / mobil drag race secara presisi.
-                </p>
-                <div className="bg-[#1E1E24] border border-[#2E2E38] rounded-lg p-4 text-center border-dashed border-[#7C3AED]/30">
-                  <p className="text-[11px] text-zinc-400 uppercase font-mono">Placeholder Screenshot Setting Rasio</p>
-                  <div className="h-32 flex items-center justify-center text-xs text-zinc-500 font-mono">
-                    [ Area Screenshot Aplikasi #3 ]
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-[#121212] border border-[#2E2E38] rounded-xl p-6 space-y-4">
-                <div className="w-12 h-12 rounded-xl bg-[#7C3AED]/20 border border-[#7C3AED]/40 flex items-center justify-center text-[#A78BFA]">
-                  <ShieldCheck className="w-6 h-6" />
-                </div>
-                <h3 className="text-base font-bold text-white font-display">
-                  4. Update Berkala &amp; Support Konsultasi
-                </h3>
-                <p className="text-xs text-zinc-300 leading-relaxed">
-                  Dapatkan update fitur terbaru secara rutin, video tutorial lengkap, serta akses konsultasi langsung dengan owner dan komunitas pembalap profesional.
-                </p>
-                <div className="bg-[#1E1E24] border border-[#2E2E38] rounded-lg p-4 text-center border-dashed border-[#7C3AED]/30">
-                  <p className="text-[11px] text-zinc-400 uppercase font-mono">Placeholder Screenshot Tutorial</p>
-                  <div className="h-32 flex items-center justify-center text-xs text-zinc-500 font-mono">
-                    [ Area Screenshot Aplikasi #4 ]
-                  </div>
-                </div>
-              </div>
+            {/* Quick Filter Navigation Tabs */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none pt-2 border-t border-[#2E2E38]">
+              {[
+                { id: 'all', label: 'Semua Fitur (6)', icon: Layers },
+                { id: 'timer', label: '1. Fitur Timer', icon: Timer },
+                { id: 'histori', label: '2. Fitur Histori', icon: History },
+                { id: 'video', label: '3. Fitur Video', icon: Video },
+                { id: 'grafik', label: '4. Fitur Grafik', icon: LineChart },
+                { id: 'setting', label: '5. Fitur Setting', icon: SettingsIcon },
+                { id: 'profile', label: '6. Fitur Profile', icon: User },
+              ].map((tab) => {
+                const IconComponent = tab.icon;
+                const isActive = selectedFeatureFilter === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setSelectedFeatureFilter(tab.id as typeof selectedFeatureFilter)}
+                    className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-bold whitespace-nowrap cursor-pointer transition-all ${
+                      isActive
+                        ? 'bg-[#7C3AED] text-white shadow-lg shadow-[#7C3AED]/20 border border-[#7C3AED]'
+                        : 'bg-[#121212] text-zinc-400 hover:text-white border border-[#2E2E38] hover:border-[#7C3AED]/50'
+                    }`}
+                  >
+                    <IconComponent className="w-3.5 h-3.5" />
+                    <span>{tab.label}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
+
+          {/* ================= 1. FITUR TIMER ================= */}
+          {(selectedFeatureFilter === 'all' || selectedFeatureFilter === 'timer') && (
+            <div className="bg-[#1E1E24] border border-[#2E2E38] rounded-xl p-6 sm:p-8 space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#2E2E38] pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-[#7C3AED]/20 border border-[#7C3AED]/40 flex items-center justify-center text-[#A78BFA] shrink-0">
+                    <Timer className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="inline-block px-2 py-0.5 rounded bg-[#7C3AED]/20 text-[#A78BFA] text-[10px] font-extrabold uppercase tracking-wider mb-0.5">
+                      FITUR 1 · TELEMETRI LANGSUNG
+                    </div>
+                    <h3 className="text-lg sm:text-xl font-bold text-white font-display">
+                      Fitur Timer (Live Telemetry, Speedometer &amp; Timeslip)
+                    </h3>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="px-2.5 py-1 rounded bg-[#121212] border border-[#2E2E38] text-[11px] font-mono text-emerald-400 font-semibold">
+                    RaceBox 1:1 Fusion
+                  </span>
+                  <span className="px-2.5 py-1 rounded bg-[#121212] border border-[#2E2E38] text-[11px] font-mono text-zinc-300">
+                    1 ft rollout: ON
+                  </span>
+                </div>
+              </div>
+
+              {/* Deskripsi Singkat Jelas Detail */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-zinc-300">
+                <div className="space-y-2 bg-[#121212] border border-[#2E2E38] rounded-lg p-4">
+                  <p className="font-bold text-white text-sm flex items-center gap-2">
+                    <Gauge className="w-4 h-4 text-[#A78BFA]" />
+                    <span>Live Cockpit Speedometer &amp; G-Meter</span>
+                  </p>
+                  <p className="text-zinc-400 leading-relaxed">
+                    Menampilkan speedometer analog dan digital presisi tinggi (kph), G-Force radar meter 2.0g, pembacaan elevasi kemiringan jalan (Slope 0.0%), serta timer digital real-time dengan akurasi mikrodetik.
+                  </p>
+                </div>
+
+                <div className="space-y-2 bg-[#121212] border border-[#2E2E38] rounded-lg p-4">
+                  <p className="font-bold text-white text-sm flex items-center gap-2">
+                    <FileCheck2 className="w-4 h-4 text-emerald-400" />
+                    <span>Deteksi Split Checkpoint &amp; Timeslip Otomatis</span>
+                  </p>
+                  <p className="text-zinc-400 leading-relaxed">
+                    Mencatat checkpoint split otomatis di 60 ft (18.288m), 100m, 150m, 201m (1/8 mile), dan 402m (1/4 mile). Lembar Timeslip langsung menyajikan Total ET, Top Speed, Reaction Time (R/T), Peak G, dan Slope Corrected ET.
+                  </p>
+                </div>
+              </div>
+
+              {/* Galeri Gambar Fitur Timer */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-semibold text-zinc-300">Pratinjau Antarmuka Fitur Timer:</span>
+                  <span className="text-[11px] text-zinc-500">Klik gambar untuk memperbesar</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div
+                    onClick={() =>
+                      setEnlargedMedia({
+                        src: '/assets/aistudio/gambar_fitur_timer_1_9380829b',
+                        title: 'Fitur Timer 1 · Live Speedometer Cockpit, Split Telemetry, Sensor GPS Standby',
+                      })
+                    }
+                    className="group relative bg-[#121212] border border-[#2E2E38] hover:border-[#7C3AED] rounded-xl overflow-hidden cursor-pointer transition-all p-3"
+                  >
+                    <img
+                      src="/assets/aistudio/gambar_fitur_timer_1_9380829b"
+                      alt="Fitur Timer Drag Race Pro+ 1"
+                      className="w-full h-80 object-contain rounded-lg bg-black/40 group-hover:scale-[1.02] transition-transform duration-300"
+                    />
+                    <div className="mt-3 flex items-center justify-between text-xs">
+                      <span className="font-semibold text-zinc-200">Live Cockpit Speedometer &amp; Telemetri</span>
+                      <span className="inline-flex items-center gap-1 text-[#A78BFA] text-[11px]">
+                        <Maximize2 className="w-3.5 h-3.5" />
+                        <span>Perbesar</span>
+                      </span>
+                    </div>
+                  </div>
+
+                  <div
+                    onClick={() =>
+                      setEnlargedMedia({
+                        src: '/assets/aistudio/gambar_fitur_timer_2_f693b2c0',
+                        title: 'Fitur Timer 2 · Hasil Drag Race Timeslip (Total ET, Top Speed, Split Waktu)',
+                      })
+                    }
+                    className="group relative bg-[#121212] border border-[#2E2E38] hover:border-[#7C3AED] rounded-xl overflow-hidden cursor-pointer transition-all p-3"
+                  >
+                    <img
+                      src="/assets/aistudio/gambar_fitur_timer_2_f693b2c0"
+                      alt="Fitur Timer Drag Race Pro+ 2"
+                      className="w-full h-80 object-contain rounded-lg bg-black/40 group-hover:scale-[1.02] transition-transform duration-300"
+                    />
+                    <div className="mt-3 flex items-center justify-between text-xs">
+                      <span className="font-semibold text-zinc-200">Hasil Akhir Drag Race - Timeslip</span>
+                      <span className="inline-flex items-center gap-1 text-[#A78BFA] text-[11px]">
+                        <Maximize2 className="w-3.5 h-3.5" />
+                        <span>Perbesar</span>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ================= 2. FITUR HISTORI ================= */}
+          {(selectedFeatureFilter === 'all' || selectedFeatureFilter === 'histori') && (
+            <div className="bg-[#1E1E24] border border-[#2E2E38] rounded-xl p-6 sm:p-8 space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#2E2E38] pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-[#7C3AED]/20 border border-[#7C3AED]/40 flex items-center justify-center text-[#A78BFA] shrink-0">
+                    <History className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="inline-block px-2 py-0.5 rounded bg-[#7C3AED]/20 text-[#A78BFA] text-[10px] font-extrabold uppercase tracking-wider mb-0.5">
+                      FITUR 2 · DATABASE RUN &amp; LOG
+                    </div>
+                    <h3 className="text-lg sm:text-xl font-bold text-white font-display">
+                      Fitur Histori (Log Balap Presisi &amp; Ekspor CSV)
+                    </h3>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="px-2.5 py-1 rounded bg-[#121212] border border-[#2E2E38] text-[11px] font-mono text-amber-400 font-semibold">
+                    Rekor ET &amp; Top Speed
+                  </span>
+                  <span className="px-2.5 py-1 rounded bg-[#121212] border border-[#2E2E38] text-[11px] font-mono text-zinc-300">
+                    Ekspor CSV
+                  </span>
+                </div>
+              </div>
+
+              {/* Deskripsi Singkat Jelas Detail */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs text-zinc-300">
+                <div className="bg-[#121212] border border-[#2E2E38] rounded-lg p-4 space-y-1.5">
+                  <p className="font-bold text-white text-sm">Penyimpanan Otomatis 100%</p>
+                  <p className="text-zinc-400 leading-relaxed">
+                    Tiap pengetesan otomatis direkam tanpa takut hilang. Menghimpun Elapsed Time, Trap Speed, 18m/60ft, 100m, 201m, G-Peak, dan Slope.
+                  </p>
+                </div>
+
+                <div className="bg-[#121212] border border-[#2E2E38] rounded-lg p-4 space-y-1.5">
+                  <p className="font-bold text-white text-sm">Papan Rekor Terbaik (PB)</p>
+                  <p className="text-zinc-400 leading-relaxed">
+                    Widget pemantau Rekor ET tercepat (contoh: 8,593s), Top Speed tertinggi (173,9 kph), serta rekor peluncuran terbaik 18m (2,327s).
+                  </p>
+                </div>
+
+                <div className="bg-[#121212] border border-[#2E2E38] rounded-lg p-4 space-y-1.5">
+                  <p className="font-bold text-white text-sm">Filter &amp; Integrasi Cepat</p>
+                  <p className="text-zinc-400 leading-relaxed">
+                    Pilah data balap berdasarkan 402m, 201m, 100m, atau sprint 0-100 kph, serta tombol aksi Time Slip, Bagikan, Video HUD, dan Grafik.
+                  </p>
+                </div>
+              </div>
+
+              {/* Pratinjau Fitur Histori */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-semibold text-zinc-300">Pratinjau Antarmuka Fitur Histori:</span>
+                  <span className="text-[11px] text-zinc-500">Klik gambar untuk memperbesar</span>
+                </div>
+                <div
+                  onClick={() =>
+                    setEnlargedMedia({
+                      src: '/assets/aistudio/gambar_fitur_histori_ae3a8fab',
+                      title: 'Fitur Histori · Riwayat Pengujian Presisi Lengkap, Rekor ET, Top Speed, dan Kartu Run Balap',
+                    })
+                  }
+                  className="group relative bg-[#121212] border border-[#2E2E38] hover:border-[#7C3AED] rounded-xl overflow-hidden cursor-pointer transition-all p-3 max-w-lg mx-auto"
+                >
+                  <img
+                    src="/assets/aistudio/gambar_fitur_histori_ae3a8fab"
+                    alt="Fitur Histori Drag Race Pro+"
+                    className="w-full h-96 object-contain rounded-lg bg-black/40 group-hover:scale-[1.02] transition-transform duration-300"
+                  />
+                  <div className="mt-3 flex items-center justify-between text-xs">
+                    <span className="font-semibold text-zinc-200">Daftar Run Balap &amp; Analisis Time Slip</span>
+                    <span className="inline-flex items-center gap-1 text-[#A78BFA] text-[11px]">
+                      <Maximize2 className="w-3.5 h-3.5" />
+                      <span>Perbesar</span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ================= 3. FITUR VIDEO ================= */}
+          {(selectedFeatureFilter === 'all' || selectedFeatureFilter === 'video') && (
+            <div className="bg-[#1E1E24] border border-[#2E2E38] rounded-xl p-6 sm:p-8 space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#2E2E38] pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-[#7C3AED]/20 border border-[#7C3AED]/40 flex items-center justify-center text-[#A78BFA] shrink-0">
+                    <Video className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="inline-block px-2 py-0.5 rounded bg-[#7C3AED]/20 text-[#A78BFA] text-[10px] font-extrabold uppercase tracking-wider mb-0.5">
+                      FITUR 3 · REAL-TIME HUD VIDEO OVERLAY
+                    </div>
+                    <h3 className="text-lg sm:text-xl font-bold text-white font-display">
+                      Fitur Video (Overlay Telemetri Balap &amp; Lampu Start 3-2-1-GO!)
+                    </h3>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="px-2.5 py-1 rounded bg-[#121212] border border-[#2E2E38] text-[11px] font-mono text-[#A78BFA] font-semibold">
+                    Overlay Video 402m / 201m
+                  </span>
+                  <span className="px-2.5 py-1 rounded bg-[#121212] border border-[#2E2E38] text-[11px] font-mono text-emerald-400">
+                    Ekspor Video Siap Medsos
+                  </span>
+                </div>
+              </div>
+
+              {/* Deskripsi Singkat Jelas Detail */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-zinc-300">
+                <div className="space-y-2 bg-[#121212] border border-[#2E2E38] rounded-lg p-4">
+                  <p className="font-bold text-white text-sm flex items-center gap-2">
+                    <Play className="w-4 h-4 text-[#A78BFA]" />
+                    <span>Lampu Start Dinamis 3-2-1-GO!</span>
+                  </p>
+                  <p className="text-zinc-400 leading-relaxed">
+                    Animasi countdown lampu start hijau yang muncul langsung di tengah rekaman video dan tersinkronisasi presisi saat kendaraan mulai bergerak.
+                  </p>
+                </div>
+
+                <div className="space-y-2 bg-[#121212] border border-[#2E2E38] rounded-lg p-4">
+                  <p className="font-bold text-white text-sm flex items-center gap-2">
+                    <Activity className="w-4 h-4 text-emerald-400" />
+                    <span>HUD Telemetri Mengambang &amp; Ekspor</span>
+                  </p>
+                  <p className="text-zinc-400 leading-relaxed">
+                    Menampilkan speedometer kph, G-Force radar, dan waktu checkpoint (100m, 200m, 300m, 402m) langsung di atas video. Hasil video dapat langsung diekspor untuk TikTok, Reels, dan YouTube Shorts.
+                  </p>
+                </div>
+              </div>
+
+              {/* Video Player Asli APK */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-semibold text-zinc-300">
+                    Pemutar Video Fitur Video HUD Overlay APK:
+                  </span>
+                  <span className="text-[11px] text-emerald-400 font-mono flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    <span>Rekaman Asli H.264 (Siap Putar)</span>
+                  </span>
+                </div>
+
+                <div className="bg-[#121212] border border-[#2E2E38] rounded-xl p-4 max-w-sm sm:max-w-md mx-auto space-y-3">
+                  <div className="relative aspect-[9/19] rounded-lg overflow-hidden bg-black flex items-center justify-center border border-[#2E2E38] group">
+                    <video
+                      ref={telemetryVideoRef}
+                      controls
+                      playsInline
+                      preload="auto"
+                      onPlay={() => setIsVideoPlaying(true)}
+                      onPause={() => setIsVideoPlaying(false)}
+                      onEnded={() => setIsVideoPlaying(false)}
+                      className="w-full h-full object-contain cursor-pointer"
+                      onClick={() => {
+                        if (telemetryVideoRef.current) {
+                          if (telemetryVideoRef.current.paused) {
+                            telemetryVideoRef.current.play().catch(() => {});
+                          } else {
+                            telemetryVideoRef.current.pause();
+                          }
+                        }
+                      }}
+                    >
+                      <source
+                        src="/assets/aistudio/video_fitur_video_809bcad5.mp4"
+                        type="video/mp4"
+                      />
+                      <source src="/api/video/telemetri" type="video/mp4" />
+                      <source
+                        src="/assets/aistudio/video_fitur_video_809bcad5"
+                        type="video/mp4"
+                      />
+                      Browser Anda tidak mendukung tag video HTML5 MP4.
+                    </video>
+
+                    {/* Play Button Overlay saat Pause */}
+                    {!isVideoPlaying && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          telemetryVideoRef.current?.play().catch(() => {});
+                        }}
+                        className="absolute inset-0 flex items-center justify-center bg-black/40 hover:bg-black/30 transition-colors cursor-pointer group"
+                        title="Klik untuk Memutar Video"
+                      >
+                        <div className="w-16 h-16 rounded-full bg-[#7C3AED]/90 hover:bg-[#7C3AED] text-white flex items-center justify-center shadow-2xl pl-1 transform group-hover:scale-110 transition-transform">
+                          <Play className="w-7 h-7 fill-white" />
+                        </div>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Tombol Kontrol Cepat Pemutar Video */}
+                  <div className="flex items-center justify-between gap-2 pt-1 border-t border-[#2E2E38]/80 text-xs">
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (telemetryVideoRef.current) {
+                            if (telemetryVideoRef.current.paused) {
+                              telemetryVideoRef.current.play().catch(() => {});
+                            } else {
+                              telemetryVideoRef.current.pause();
+                            }
+                          }
+                        }}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#1E1E24] hover:bg-[#2E2E38] border border-[#2E2E38] text-zinc-200 font-semibold transition-colors cursor-pointer"
+                      >
+                        {isVideoPlaying ? (
+                          <>
+                            <Pause className="w-3.5 h-3.5 text-amber-400" />
+                            <span>Jeda</span>
+                          </>
+                        ) : (
+                          <>
+                            <Play className="w-3.5 h-3.5 text-emerald-400 fill-emerald-400" />
+                            <span>Putar Video</span>
+                          </>
+                        )}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (telemetryVideoRef.current) {
+                            telemetryVideoRef.current.currentTime = 0;
+                            telemetryVideoRef.current.play().catch(() => {});
+                          }
+                        }}
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#1E1E24] hover:bg-[#2E2E38] border border-[#2E2E38] text-zinc-300 transition-colors cursor-pointer"
+                        title="Ulangi dari awal"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">Ulangi</span>
+                      </button>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setEnlargedMedia({
+                          src: '/assets/aistudio/video_fitur_video_809bcad5.mp4',
+                          title: 'Video Telemetri HUD Overlay APK (Asli)',
+                          type: 'video',
+                        })
+                      }
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#7C3AED]/20 hover:bg-[#7C3AED]/30 border border-[#7C3AED]/40 text-[#A78BFA] font-semibold transition-colors cursor-pointer"
+                    >
+                      <Maximize2 className="w-3.5 h-3.5" />
+                      <span>Layar Penuh</span>
+                    </button>
+                  </div>
+
+                  <p className="text-center text-[11px] text-zinc-400 mt-1 font-mono">
+                    Tampilan Video HUD Overlay dengan Countdown 3-2-1-GO!, Speedometer, G-Force &amp; Checkpoint Waktu
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ================= 4. FITUR GRAFIK ================= */}
+          {(selectedFeatureFilter === 'all' || selectedFeatureFilter === 'grafik') && (
+            <div className="bg-[#1E1E24] border border-[#2E2E38] rounded-xl p-6 sm:p-8 space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#2E2E38] pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-[#7C3AED]/20 border border-[#7C3AED]/40 flex items-center justify-center text-[#A78BFA] shrink-0">
+                    <LineChart className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="inline-block px-2 py-0.5 rounded bg-[#7C3AED]/20 text-[#A78BFA] text-[10px] font-extrabold uppercase tracking-wider mb-0.5">
+                      FITUR 4 · ANALISIS KURVA MULTI-SEKTOR
+                    </div>
+                    <h3 className="text-lg sm:text-xl font-bold text-white font-display">
+                      Fitur Grafik (Telemetry &amp; Dyno Analyzer 200Hz)
+                    </h3>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="px-2.5 py-1 rounded bg-[#121212] border border-[#2E2E38] text-[11px] font-mono text-[#A78BFA] font-semibold">
+                    Sampling 200Hz
+                  </span>
+                  <span className="px-2.5 py-1 rounded bg-[#121212] border border-[#2E2E38] text-[11px] font-mono text-emerald-400">
+                    Komparasi Pass A vs Pass B
+                  </span>
+                </div>
+              </div>
+
+              {/* Deskripsi Singkat Jelas Detail */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs text-zinc-300">
+                <div className="bg-[#121212] border border-[#2E2E38] rounded-lg p-4 space-y-1.5">
+                  <p className="font-bold text-white text-sm">6 Mode Kurva Grafis</p>
+                  <p className="text-zinc-400 leading-relaxed">
+                    Menganalisis Kecepatan vs Waktu, Kecepatan vs Jarak, G-Force 6-DOF, Delta Waktu, Kurva Tenaga Roda (Wheel HP), serta Elevasi &amp; Slope kontur lintasan.
+                  </p>
+                </div>
+
+                <div className="bg-[#121212] border border-[#2E2E38] rounded-lg p-4 space-y-1.5">
+                  <p className="font-bold text-white text-sm">Titik Inspeksi Interaktif</p>
+                  <p className="text-zinc-400 leading-relaxed">
+                    Kursor inspeksi kuning yang bisa digeser untuk membaca kecepatan (kph), G-force, dan Wheel HP secara detail di detik dan meter mana saja.
+                  </p>
+                </div>
+
+                <div className="bg-[#121212] border border-[#2E2E38] rounded-lg p-4 space-y-1.5">
+                  <p className="font-bold text-white text-sm">Analisis Split Sektor A vs B</p>
+                  <p className="text-zinc-400 leading-relaxed">
+                    Tabel komparasi langsung: 0-18m 60ft Launch, 18-100m, 100-201m, sprint 0-100 kph, hingga perkiraan Wheel Horsepower puncak.
+                  </p>
+                </div>
+              </div>
+
+              {/* Navigasi Sub-Tab Gambar Grafik */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-semibold text-zinc-300">Pilih Tampilan Kurva Grafik Telemetri:</span>
+                  <span className="text-[11px] text-zinc-500">7 Tampilan Lengkap</span>
+                </div>
+
+                <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+                  {[
+                    '1. Speed vs Waktu',
+                    '2. Speed vs Jarak',
+                    '3. G-Force 6-DOF',
+                    '4. Delta Waktu A/B',
+                    '5. Kurva Wheel HP',
+                    '6. Elevasi & Slope',
+                    '7. Tabel Split Sektor',
+                  ].map((label, idx) => (
+                    <button
+                      key={label}
+                      type="button"
+                      onClick={() => setActiveGrafikTab(idx)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap cursor-pointer transition-colors ${
+                        activeGrafikTab === idx
+                          ? 'bg-[#7C3AED] text-white border border-[#7C3AED]'
+                          : 'bg-[#121212] text-zinc-400 hover:text-white border border-[#2E2E38]'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Container Gambar Grafik Terpilih */}
+                {(() => {
+                  const grafikImages = [
+                    {
+                      src: '/assets/aistudio/gambar_fitur_grafik_1_0e79643d',
+                      title: 'Fitur Grafik 1 · Analisis Kecepatan vs Waktu (kph / s) dengan Titik Inspeksi',
+                      desc: 'Menampilkan kurva akselerasi kelajuan terhadap waktu secara presisi untuk memantau waktu respons oper gigi.',
+                    },
+                    {
+                      src: '/assets/aistudio/gambar_fitur_grafik_2_8a26aaa5',
+                      title: 'Fitur Grafik 2 · Analisis Kecepatan vs Jarak (kph / m)',
+                      desc: 'Menganalisis pencapaian kecepatan puncak (kph) di setiap meter lintasan dari garis start hingga finish 201m/402m.',
+                    },
+                    {
+                      src: '/assets/aistudio/gambar_fitur_grafik_3_617079f5',
+                      title: 'Fitur Grafik 3 · Analisis G-Force 6-DOF (G / s)',
+                      desc: 'Mendeteksi gaya gravitasi longitudinal untuk membaca traksi ban saat start launch dan sentakan perpindahan gear.',
+                    },
+                    {
+                      src: '/assets/aistudio/gambar_fitur_grafik_4_872157a8',
+                      title: 'Fitur Grafik 4 · Analisis Delta Waktu A vs B (Selisih Detik)',
+                      desc: 'Komparasi langsung antara Run A dan Run B untuk mengetahui di sektor mana kendaraan unggul atau tertinggal.',
+                    },
+                    {
+                      src: '/assets/aistudio/gambar_fitur_grafik_5_13930e03',
+                      title: 'Fitur Grafik 5 · Kurva Wheel HP / Dyno Estimator (HP / s)',
+                      desc: 'Kalkulasi tenaga roda instan (Wheel Horsepower) untuk melihat efisiensi tenaga mesin dan mendeteksi selip kopling.',
+                    },
+                    {
+                      src: '/assets/aistudio/gambar_fitur_grafik_6_86675b35',
+                      title: 'Fitur Grafik 6 · Analisis Elevasi & Slope Lintasan (Meter / m)',
+                      desc: 'Membaca kemiringan jalan pengujian secara otomatis untuk memastikan hasil pengetesan memenuhi standar sertifikasi.',
+                    },
+                    {
+                      src: '/assets/aistudio/gambar_fitur_grafik_7_d2a8b150',
+                      title: 'Fitur Grafik 7 · Tabel Lengkap Split Interval Sektor (Pass A vs Pass B)',
+                      desc: 'Rincian data numerik per sektor: Launch 60ft, 100m, 201m, sprint 0-100 kph, trap speed, dan peak horsepower.',
+                    },
+                  ];
+                  const currentGrafik = grafikImages[activeGrafikTab] || grafikImages[0];
+
+                  return (
+                    <div
+                      onClick={() =>
+                        setEnlargedMedia({
+                          src: currentGrafik.src,
+                          title: currentGrafik.title,
+                        })
+                      }
+                      className="group bg-[#121212] border border-[#2E2E38] hover:border-[#7C3AED] rounded-xl p-4 cursor-pointer transition-all max-w-lg mx-auto"
+                    >
+                      <img
+                        src={currentGrafik.src}
+                        alt={currentGrafik.title}
+                        className="w-full h-96 object-contain rounded-lg bg-black/40 group-hover:scale-[1.02] transition-transform duration-300"
+                      />
+                      <div className="mt-3 space-y-1">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-bold text-white">{currentGrafik.title}</span>
+                          <span className="inline-flex items-center gap-1 text-[#A78BFA] text-[11px] shrink-0 ml-2">
+                            <Maximize2 className="w-3.5 h-3.5" />
+                            <span>Perbesar</span>
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-zinc-400 leading-relaxed">{currentGrafik.desc}</p>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+          )}
+
+          {/* ================= 5. FITUR SETTING ================= */}
+          {(selectedFeatureFilter === 'all' || selectedFeatureFilter === 'setting') && (
+            <div className="bg-[#1E1E24] border border-[#2E2E38] rounded-xl p-6 sm:p-8 space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#2E2E38] pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-[#7C3AED]/20 border border-[#7C3AED]/40 flex items-center justify-center text-[#A78BFA] shrink-0">
+                    <SettingsIcon className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="inline-block px-2 py-0.5 rounded bg-[#7C3AED]/20 text-[#A78BFA] text-[10px] font-extrabold uppercase tracking-wider mb-0.5">
+                      FITUR 5 · PENGATURAN &amp; KALIBRASI
+                    </div>
+                    <h3 className="text-lg sm:text-xl font-bold text-white font-display">
+                      Fitur Setting (Kalibrasi Waktu, Bahasa, Suara &amp; Target Jarak)
+                    </h3>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="px-2.5 py-1 rounded bg-[#121212] border border-[#2E2E38] text-[11px] font-mono text-zinc-300">
+                    Preset RaceBox &amp; Qstarz
+                  </span>
+                  <span className="px-2.5 py-1 rounded bg-[#121212] border border-[#2E2E38] text-[11px] font-mono text-emerald-400">
+                    Keep-Awake Aktif
+                  </span>
+                </div>
+              </div>
+
+              {/* Deskripsi Singkat Jelas Detail */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs text-zinc-300">
+                <div className="bg-[#121212] border border-[#2E2E38] rounded-lg p-4 space-y-1.5">
+                  <p className="font-bold text-white text-sm">Kalibrasi Offset Presisi</p>
+                  <p className="text-zinc-400 leading-relaxed">
+                    Offset global dan offset checkpoint khusus (18m, 100m, 201m, 203m, 402m) untuk menyinkronkan waktu dengan alat ukur resmi.
+                  </p>
+                </div>
+
+                <div className="bg-[#121212] border border-[#2E2E38] rounded-lg p-4 space-y-1.5">
+                  <p className="font-bold text-white text-sm">Bahasa &amp; Zona Waktu Otomatis</p>
+                  <p className="text-zinc-400 leading-relaxed">
+                    Dukungan 5 bahasa (Indonesia, English, Melayu, Thai, Vietnam) dan sinkronisasi zona waktu (WIB, WITA, WIT) berbasis GPS.
+                  </p>
+                </div>
+
+                <div className="bg-[#121212] border border-[#2E2E38] rounded-lg p-4 space-y-1.5">
+                  <p className="font-bold text-white text-sm">Sound Effects &amp; Kokpit Mode</p>
+                  <p className="text-zinc-400 leading-relaxed">
+                    Audio revving mesin balap, radar split, mode kokpit landscape untuk setang motor, serta fitur layar HP selalu hidup (keep-awake).
+                  </p>
+                </div>
+              </div>
+
+              {/* Navigasi Sub-Tab Gambar Setting */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-semibold text-zinc-300">Pilih Menu Pengaturan &amp; Konfigurasi:</span>
+                  <span className="text-[11px] text-zinc-500">4 Menu Pengaturan</span>
+                </div>
+
+                <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+                  {[
+                    '1. Kalibrasi Waktu & Offset Checkpoint',
+                    '2. Bahasa & Zona Waktu',
+                    '3. Efek Suara Balap & Orientasi Layar',
+                    '4. Target Jarak & Layar Selalu Hidup',
+                  ].map((label, idx) => (
+                    <button
+                      key={label}
+                      type="button"
+                      onClick={() => setActiveSettingTab(idx)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap cursor-pointer transition-colors ${
+                        activeSettingTab === idx
+                          ? 'bg-[#7C3AED] text-white border border-[#7C3AED]'
+                          : 'bg-[#121212] text-zinc-400 hover:text-white border border-[#2E2E38]'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Container Gambar Setting Terpilih */}
+                {(() => {
+                  const settingImages = [
+                    {
+                      src: '/assets/aistudio/gambar_fitur_setting_1_c502d761',
+                      title: 'Fitur Setting 1 · Kalibrasi Waktu Drag Race & Offset Checkpoint',
+                      desc: 'Konfigurasi offset per checkpoint (18m, 100m, 201m, 203m, 402m) dengan preset RaceBox Spec dan Qstarz Spec.',
+                    },
+                    {
+                      src: '/assets/aistudio/gambar_fitur_setting_2_4e57cdb0',
+                      title: 'Fitur Setting 2 · Pilihan Bahasa Aplikasi & Zona Waktu (WIB / WITA / WIT)',
+                      desc: 'Dukungan multi-bahasa internasional serta penyesuaian zona waktu Indonesia otomatis via sensor lokasi/GPS.',
+                    },
+                    {
+                      src: '/assets/aistudio/gambar_fitur_setting_3_910f33f5',
+                      title: 'Fitur Setting 3 · Efek Suara Balap (Sound Effects) & Mode Orientasi Layar',
+                      desc: 'Kontrol volume suara revving mesin balap, suara radar split, serta orientasi layar tegak portrait atau kokpit landscape.',
+                    },
+                    {
+                      src: '/assets/aistudio/gambar_fitur_setting_4_2a193493',
+                      title: 'Fitur Setting 4 · Target Jarak Checkpoint & Layar HP Selalu Hidup',
+                      desc: 'Penetapan target finish utama (201m, 402m, atau kustom) serta toggle Keep-Awake agar layar ponsel tidak mati di lintasan.',
+                    },
+                  ];
+                  const currentSetting = settingImages[activeSettingTab] || settingImages[0];
+
+                  return (
+                    <div
+                      onClick={() =>
+                        setEnlargedMedia({
+                          src: currentSetting.src,
+                          title: currentSetting.title,
+                        })
+                      }
+                      className="group bg-[#121212] border border-[#2E2E38] hover:border-[#7C3AED] rounded-xl p-4 cursor-pointer transition-all max-w-lg mx-auto"
+                    >
+                      <img
+                        src={currentSetting.src}
+                        alt={currentSetting.title}
+                        className="w-full h-96 object-contain rounded-lg bg-black/40 group-hover:scale-[1.02] transition-transform duration-300"
+                      />
+                      <div className="mt-3 space-y-1">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-bold text-white">{currentSetting.title}</span>
+                          <span className="inline-flex items-center gap-1 text-[#A78BFA] text-[11px] shrink-0 ml-2">
+                            <Maximize2 className="w-3.5 h-3.5" />
+                            <span>Perbesar</span>
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-zinc-400 leading-relaxed">{currentSetting.desc}</p>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+          )}
+
+          {/* ================= 6. FITUR PROFILE ================= */}
+          {(selectedFeatureFilter === 'all' || selectedFeatureFilter === 'profile') && (
+            <div className="bg-[#1E1E24] border border-[#2E2E38] rounded-xl p-6 sm:p-8 space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#2E2E38] pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-[#7C3AED]/20 border border-[#7C3AED]/40 flex items-center justify-center text-[#A78BFA] shrink-0">
+                    <User className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="inline-block px-2 py-0.5 rounded bg-[#7C3AED]/20 text-[#A78BFA] text-[10px] font-extrabold uppercase tracking-wider mb-0.5">
+                      FITUR 6 · IDENTITAS RACER &amp; GARASI
+                    </div>
+                    <h3 className="text-lg sm:text-xl font-bold text-white font-display">
+                      Fitur Profile (Identitas Pembalap, Rekor PB &amp; Garasi Kendaraan)
+                    </h3>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="px-2.5 py-1 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[11px] font-mono font-bold">
+                    PERMANENT PRO
+                  </span>
+                  <span className="px-2.5 py-1 rounded bg-[#121212] border border-[#2E2E38] text-[11px] font-mono text-zinc-300">
+                    Garasi Digital
+                  </span>
+                </div>
+              </div>
+
+              {/* Deskripsi Singkat Jelas Detail */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs text-zinc-300">
+                <div className="bg-[#121212] border border-[#2E2E38] rounded-lg p-4 space-y-1.5">
+                  <p className="font-bold text-white text-sm">Identitas &amp; Tim Balap</p>
+                  <p className="text-zinc-400 leading-relaxed">
+                    Kartu profil resmi pembalap dengan status lisensi, nama tim, avatar kustom, serta foto kendaraan aktif dari kamera/galeri ponsel.
+                  </p>
+                </div>
+
+                <div className="bg-[#121212] border border-[#2E2E38] rounded-lg p-4 space-y-1.5">
+                  <p className="font-bold text-white text-sm">Personal Best (PB) Showcase</p>
+                  <p className="text-zinc-400 leading-relaxed">
+                    Mencatat capaian terbaik pribadi untuk 402m (9.845s), 201m (6.340s), dan sprint 0-100 kph (2.480s / 1.52 G).
+                  </p>
+                </div>
+
+                <div className="bg-[#121212] border border-[#2E2E38] rounded-lg p-4 space-y-1.5">
+                  <p className="font-bold text-white text-sm">Garasi Spesifikasi Mesin</p>
+                  <p className="text-zinc-400 leading-relaxed">
+                    Fitur manajemen garasi untuk menyimpan berbagai motor/mobil balap beserta data rasio gigi transmisi dan dyno mesin masing-masing.
+                  </p>
+                </div>
+              </div>
+
+              {/* Pratinjau Fitur Profile */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-semibold text-zinc-300">Pratinjau Antarmuka Fitur Profile:</span>
+                  <span className="text-[11px] text-zinc-500">Klik gambar untuk memperbesar</span>
+                </div>
+                <div
+                  onClick={() =>
+                    setEnlargedMedia({
+                      src: '/assets/aistudio/gambar_fitur_profile_b1c321fd',
+                      title: 'Fitur Profile · Identitas Pembalap, Foto Kendaraan Aktif, Personal Best PB & Garasi Balap',
+                    })
+                  }
+                  className="group relative bg-[#121212] border border-[#2E2E38] hover:border-[#7C3AED] rounded-xl overflow-hidden cursor-pointer transition-all p-3 max-w-lg mx-auto"
+                >
+                  <img
+                    src="/assets/aistudio/gambar_fitur_profile_b1c321fd"
+                    alt="Fitur Profile Drag Race Pro+"
+                    className="w-full h-96 object-contain rounded-lg bg-black/40 group-hover:scale-[1.02] transition-transform duration-300"
+                  />
+                  <div className="mt-3 flex items-center justify-between text-xs">
+                    <span className="font-semibold text-zinc-200">Profil Pembalap &amp; Garasi Spesifikasi</span>
+                    <span className="inline-flex items-center gap-1 text-[#A78BFA] text-[11px]">
+                      <Maximize2 className="w-3.5 h-3.5" />
+                      <span>Perbesar</span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </section>
       )}
 
@@ -1477,7 +2399,7 @@ export const BuyerStorefront: React.FC<BuyerStorefrontProps> = ({
                   Wajib Like video giveaway dan video-video drag race lainnya di akun TikTok owner.
                 </li>
                 <li>
-                  Unggah bukti screenshot seluruh syarat tersebut ke form di bawah ini, serta masukkan nama akun TikTok pendaftar Anda.
+                  Unggah bukti foto seluruh syarat tersebut ke form di bawah ini, serta masukkan nama akun TikTok pendaftar Anda.
                 </li>
               </ol>
 
@@ -1526,7 +2448,7 @@ export const BuyerStorefront: React.FC<BuyerStorefrontProps> = ({
 
               <div className="space-y-1.5">
                 <label htmlFor="gw-file-upload" className="block text-xs font-semibold text-zinc-200">
-                  Unggah Screenshot Bukti Syarat (Follow IG, TikTok &amp; Like Video)
+                  Unggah Foto Bukti Syarat (Follow IG, TikTok &amp; Like Video)
                 </label>
                 <div className="border border-dashed border-[#2E2E38] hover:border-[#7C3AED] rounded-xl p-5 bg-[#121212] text-center transition-colors">
                   {gwPreviewBase64 ? (
@@ -1551,7 +2473,7 @@ export const BuyerStorefront: React.FC<BuyerStorefrontProps> = ({
                         <Upload className="w-5 h-5" />
                       </div>
                       <div className="text-sm font-semibold text-white">
-                        Klik untuk Memilih Screenshot Bukti Syarat
+                        Klik untuk Memilih Foto Bukti Syarat
                       </div>
                       <p className="text-xs text-zinc-400">
                         Format PNG, JPG, atau WEBP. Pastikan terlihat jelas.
@@ -1651,7 +2573,82 @@ export const BuyerStorefront: React.FC<BuyerStorefrontProps> = ({
         </section>
       )}
 
+      {/* Lightbox Modal untuk Preview Media (Pratinjau Telemetri & Video Fitur APK) */}
+      {enlargedMedia && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fade-in"
+          onClick={() => setEnlargedMedia(null)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className="relative max-w-5xl w-full bg-[#18181E] border border-[#2E2E38] rounded-2xl p-4 sm:p-6 shadow-2xl flex flex-col items-center max-h-[92vh]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="w-full flex items-center justify-between pb-3 mb-3 border-b border-[#2E2E38]/80">
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#7C3AED] animate-pulse" />
+                <h3 className="text-sm sm:text-base font-bold text-white tracking-wide">
+                  {enlargedMedia.title}
+                </h3>
+                <span className="text-[10px] uppercase font-semibold px-2 py-0.5 rounded bg-[#7C3AED]/20 text-[#A78BFA] border border-[#7C3AED]/40">
+                  {enlargedMedia.type === 'video' ? 'Video Player' : 'Visual Telemetri HD'}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEnlargedMedia(null)}
+                className="p-1.5 rounded-lg bg-[#2E2E38]/60 hover:bg-[#2E2E38] text-zinc-300 hover:text-white transition-colors cursor-pointer"
+                title="Tutup (Esc)"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
+            {/* Media Content */}
+            <div className="w-full flex-1 min-h-0 flex items-center justify-center overflow-auto rounded-xl bg-[#0F0F13] p-1 border border-[#2E2E38]/50">
+              {enlargedMedia.type === 'video' ? (
+                <video
+                  controls
+                  autoPlay
+                  playsInline
+                  className="max-h-[72vh] max-w-full rounded-lg shadow-inner object-contain bg-black"
+                >
+                  <source src={enlargedMedia.src} type="video/mp4" />
+                  <source src="/api/video/telemetri" type="video/mp4" />
+                  <source
+                    src="/assets/aistudio/video_fitur_video_809bcad5.mp4"
+                    type="video/mp4"
+                  />
+                  Browser Anda tidak mendukung tag video HTML5.
+                </video>
+              ) : (
+                <img
+                  src={enlargedMedia.src}
+                  alt={enlargedMedia.title}
+                  className="max-h-[72vh] max-w-full rounded-lg shadow-inner object-contain select-none"
+                />
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="w-full flex items-center justify-between pt-3 mt-2 text-xs text-zinc-300">
+              <span className="text-[11px] text-zinc-300">
+                DRAG RACE L.A APK • Tampilan resolusi asli aplikasi
+              </span>
+              <button
+                type="button"
+                onClick={() => setEnlargedMedia(null)}
+                className="px-3.5 py-1.5 rounded-lg bg-[#1E1E24] hover:bg-[#2E2E38] text-zinc-200 text-xs font-semibold transition-colors cursor-pointer border border-[#2E2E38]"
+              >
+                Tutup Pratinjau
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
+

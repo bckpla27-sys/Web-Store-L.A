@@ -2,6 +2,47 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <script>
+      // Suppress benign Vite dev server WebSocket disconnect and HMR client errors in preview iframe
+      (function () {
+        function isViteHmrError(msg, src) {
+          var str = (String(msg || '') + ' ' + String(src || '')).toLowerCase();
+          return (
+            str.indexOf('websocket') !== -1 ||
+            str.indexOf('@vite/client') !== -1 ||
+            str.indexOf('vite') !== -1
+          );
+        }
+        var prevOnError = window.onerror;
+        window.onerror = function (msg, url, line, col, error) {
+          if (isViteHmrError(msg, url)) return true;
+          if (typeof prevOnError === 'function') {
+            return prevOnError.apply(this, arguments);
+          }
+        };
+        window.addEventListener(
+          'error',
+          function (e) {
+            if (isViteHmrError(e.message, e.filename)) {
+              e.preventDefault();
+              e.stopImmediatePropagation();
+            }
+          },
+          true
+        );
+        window.addEventListener(
+          'unhandledrejection',
+          function (e) {
+            var reason = e.reason ? String(e.reason.message || e.reason) : '';
+            if (isViteHmrError(reason, '')) {
+              e.preventDefault();
+              e.stopImmediatePropagation();
+            }
+          },
+          true
+        );
+      })();
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>DRAG RACE L.A STORE</title>
     <meta name="description" content="Toko lisensi otomatis 24/7 untuk Drag Race Pro+ dengan verifikasi pembayaran DANA, generator kunci cepat KEY-XXXXXXXXXXX, dan dashboard sinkronisasi Cloud Database / Firebase." />
@@ -14,25 +55,6 @@
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Outfit:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
   </head>
   <body>
-    <script>
-      // Suppress benign Vite dev server WebSocket disconnect errors in preview environment
-      window.addEventListener('error', function (e) {
-        if (
-          (e.filename && (e.filename.includes('@vite/client') || e.filename.includes('vite'))) ||
-          (e.message && (e.message.includes('WebSocket') || e.message.includes('@vite/client')))
-        ) {
-          e.preventDefault();
-          e.stopImmediatePropagation();
-        }
-      });
-      window.addEventListener('unhandledrejection', function (e) {
-        var reason = e.reason ? String(e.reason.message || e.reason) : '';
-        if (reason.includes('WebSocket') || reason.includes('vite')) {
-          e.preventDefault();
-          e.stopImmediatePropagation();
-        }
-      });
-    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

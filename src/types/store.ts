@@ -77,6 +77,15 @@ export interface EmailNotificationSettings {
   emailjsPublicKey: string;
 }
 
+export interface ApkReleaseSettings {
+  version: string; // e.g. "v2.7.0"
+  fileName: string; // e.g. "DragRaceLA_v2.7_Release.apk"
+  fileSize: string; // e.g. "48.6 MB"
+  downloadUrl: string; // e.g. "/downloads/DragRaceLA_latest.apk" or external direct link
+  changelog?: string;
+  updatedAt?: number;
+}
+
 export interface StoreSettings {
   danaNumber: string;
   danaAccountName: string;
@@ -85,5 +94,7 @@ export interface StoreSettings {
   ownerUsername: string;
   ownerPasswordHash: string;
   emailSettings: EmailNotificationSettings;
+  apkRelease?: ApkReleaseSettings;
   updatedAt: number;
 }
+

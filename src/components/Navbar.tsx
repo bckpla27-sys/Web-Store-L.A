@@ -5,10 +5,12 @@ interface NavbarProps {
   isOwnerView: boolean;
   isOwnerAuthenticated: boolean;
   isOwnerUnlocked: boolean;
-  activeTab: 'buy' | 'status' | 'features' | 'giveaway';
+  activeTab: 'download' | 'buy' | 'status' | 'features' | 'giveaway';
   onToggleOwnerView: () => void;
   onBrandTitleClick: () => void;
-  onSelectTab: (tab: 'buy' | 'status' | 'features' | 'giveaway') => void;
+  onSelectTab: (
+    tab: 'download' | 'buy' | 'status' | 'features' | 'giveaway'
+  ) => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -43,6 +45,20 @@ export const Navbar: React.FC<NavbarProps> = ({
           aria-label="Navigasi Utama"
           className="hidden md:flex items-center gap-5 text-sm font-medium text-zinc-400"
         >
+          <button
+            type="button"
+            onClick={() => {
+              if (isOwnerView) onToggleOwnerView();
+              onSelectTab('download');
+            }}
+            className={`inline-flex items-center gap-1.5 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+              !isOwnerView && activeTab === 'download'
+                ? 'text-white font-semibold'
+                : 'hover:text-white'
+            }`}
+          >
+            <span>Download APK</span>
+          </button>
           <button
             type="button"
             onClick={() => {

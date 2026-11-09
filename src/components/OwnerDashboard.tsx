@@ -112,6 +112,25 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
   const [emailSaveStatus, setEmailSaveStatus] = useState('');
   const [isTestingEmail, setIsTestingEmail] = useState(false);
 
+  // APK Release Management state
+  const [apkVersionInput, setApkVersionInput] = useState(
+    settings.apkRelease?.version || 'v2.7.0'
+  );
+  const [apkFileNameInput, setApkFileNameInput] = useState(
+    settings.apkRelease?.fileName || 'DragRaceLA_v2.7_Release.apk'
+  );
+  const [apkFileSizeInput, setApkFileSizeInput] = useState(
+    settings.apkRelease?.fileSize || '48.6 MB'
+  );
+  const [apkDownloadUrlInput, setApkDownloadUrlInput] = useState(
+    settings.apkRelease?.downloadUrl || '/downloads/DragRaceLA_latest.apk'
+  );
+  const [apkChangelogInput, setApkChangelogInput] = useState(
+    settings.apkRelease?.changelog || ''
+  );
+  const [apkSaveStatus, setApkSaveStatus] = useState('');
+  const [isSavingApk, setIsSavingApk] = useState(false);
+
   useEffect(() => {
     if (settings.firebaseDbUrl) {
       setFirebaseUrlInput(settings.firebaseDbUrl);
@@ -125,7 +144,46 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
       setEmailjsTemplateId(settings.emailSettings.emailjsTemplateId || '');
       setEmailjsPublicKey(settings.emailSettings.emailjsPublicKey || '');
     }
-  }, [settings.firebaseDbUrl, settings.emailSettings]);
+    if (settings.apkRelease) {
+      setApkVersionInput(settings.apkRelease.version || 'v2.7.0');
+      setApkFileNameInput(
+        settings.apkRelease.fileName || 'DragRaceLA_v2.7_Release.apk'
+      );
+      setApkFileSizeInput(settings.apkRelease.fileSize || '48.6 MB');
+      setApkDownloadUrlInput(
+        settings.apkRelease.downloadUrl || '/downloads/DragRaceLA_latest.apk'
+      );
+      setApkChangelogInput(settings.apkRelease.changelog || '');
+    }
+  }, [settings.firebaseDbUrl, settings.emailSettings, settings.apkRelease]);
+
+  const handleSaveApkRelease = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingApk(true);
+    setApkSaveStatus('Memperbarui rilis APK...');
+    try {
+      const updated = await updateStoreSettings({
+        apkRelease: {
+          version: apkVersionInput.trim() || 'v2.7.0',
+          fileName: apkFileNameInput.trim() || 'DragRaceLA_v2.7_Release.apk',
+          fileSize: apkFileSizeInput.trim() || '48.6 MB',
+          downloadUrl:
+            apkDownloadUrlInput.trim() || '/downloads/DragRaceLA_latest.apk',
+          changelog: apkChangelogInput.trim(),
+          updatedAt: Date.now(),
+        },
+      });
+      onSettingsChange(updated);
+      setApkSaveStatus(
+        'Rilis APK berhasil disimpan! Tombol download di toko langsung mengarah ke versi ini.'
+      );
+      setTimeout(() => setApkSaveStatus(''), 5000);
+    } catch {
+      setApkSaveStatus('Gagal menyimpan rilis APK.');
+    } finally {
+      setIsSavingApk(false);
+    }
+  };
 
   // Manual Key Generator state (Owner tool)
   const [manualUsername, setManualUsername] = useState('');
@@ -968,6 +1026,156 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
         </form>
       </div>
 
+      {/* 2.5. Manajemen Rilis & Link Download APK Otomatis */}
+      <div className="bg-[#1E1E24] border border-[#2E2E38] rounded-xl p-6 space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#2E2E38] pb-4">
+          <div className="flex items-center gap-2.5">
+            <Download className="w-5 h-5 text-[#A78BFA]" />
+            <div>
+              <h2 className="text-base font-bold text-white font-display">
+                Manajemen Rilis &amp; Link Download APK Otomatis
+              </h2>
+              <p className="text-xs text-zinc-400 mt-0.5">
+                Setiap kali Anda memperbarui versi atau link di sini, tombol Download APK di toko pembeli otomatis mengarah ke versi rilis terbaru.
+              </p>
+            </div>
+          </div>
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#7C3AED]/20 text-[#A78BFA] text-xs font-mono border border-[#7C3AED]/40">
+            <span>Versi Aktif:</span>
+            <strong className="text-white">{apkVersionInput || 'v2.7.0'}</strong>
+          </span>
+        </div>
+
+        <form onSubmit={handleSaveApkRelease} className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label
+                htmlFor="apk-version-input"
+                className="block text-[11px] font-medium text-zinc-300 mb-1"
+              >
+                Nomor Versi Rilis (Wajib)
+              </label>
+              <input
+                id="apk-version-input"
+                type="text"
+                value={apkVersionInput}
+                onChange={(e) => setApkVersionInput(e.target.value)}
+                placeholder="Contoh: v2.8.0"
+                required
+                className="w-full px-3 py-2 rounded-lg bg-[#121212] border border-[#2E2E38] text-xs font-mono text-white placeholder-zinc-600 focus:outline-none focus:border-[#7C3AED]"
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="apk-filename-input"
+                className="block text-[11px] font-medium text-zinc-300 mb-1"
+              >
+                Nama File APK (Wajib)
+              </label>
+              <input
+                id="apk-filename-input"
+                type="text"
+                value={apkFileNameInput}
+                onChange={(e) => setApkFileNameInput(e.target.value)}
+                placeholder="Contoh: DragRaceLA_v2.8_Release.apk"
+                required
+                className="w-full px-3 py-2 rounded-lg bg-[#121212] border border-[#2E2E38] text-xs font-mono text-white placeholder-zinc-600 focus:outline-none focus:border-[#7C3AED]"
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="apk-filesize-input"
+                className="block text-[11px] font-medium text-zinc-300 mb-1"
+              >
+                Ukuran File (Contoh: 49.2 MB)
+              </label>
+              <input
+                id="apk-filesize-input"
+                type="text"
+                value={apkFileSizeInput}
+                onChange={(e) => setApkFileSizeInput(e.target.value)}
+                placeholder="Contoh: 48.6 MB"
+                className="w-full px-3 py-2 rounded-lg bg-[#121212] border border-[#2E2E38] text-xs font-mono text-white placeholder-zinc-600 focus:outline-none focus:border-[#7C3AED]"
+              />
+            </div>
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label
+                htmlFor="apk-downloadurl-input"
+                className="block text-[11px] font-medium text-zinc-300"
+              >
+                Tautan / Link Download APK (Otomatis Diunduh Pembeli)
+              </label>
+              <button
+                type="button"
+                onClick={() =>
+                  setApkDownloadUrlInput('/downloads/DragRaceLA_latest.apk')
+                }
+                className="text-[10px] text-[#A78BFA] hover:underline cursor-pointer"
+              >
+                Gunakan Link Server Lokal (/downloads/DragRaceLA_latest.apk)
+              </button>
+            </div>
+            <input
+              id="apk-downloadurl-input"
+              type="text"
+              value={apkDownloadUrlInput}
+              onChange={(e) => setApkDownloadUrlInput(e.target.value)}
+              placeholder="Contoh: /downloads/DragRaceLA_latest.apk atau https://drive.google.com/..."
+              required
+              className="w-full px-3 py-2 rounded-lg bg-[#121212] border border-[#2E2E38] text-xs font-mono text-white placeholder-zinc-600 focus:outline-none focus:border-[#7C3AED]"
+            />
+            <p className="text-[11px] text-zinc-500 mt-1">
+              Bisa menggunakan link server bawaan (
+              <code className="text-[#A78BFA]">
+                /downloads/DragRaceLA_latest.apk
+              </code>
+              ) atau URL unduhan langsung ke server cloud/hosting APK Anda.
+            </p>
+          </div>
+
+          <div>
+            <label
+              htmlFor="apk-changelog-input"
+              className="block text-[11px] font-medium text-zinc-300 mb-1"
+            >
+              Catatan Pembaruan / Changelog (Opsional - Tampil di Toko Pembeli)
+            </label>
+            <textarea
+              id="apk-changelog-input"
+              rows={2}
+              value={apkChangelogInput}
+              onChange={(e) => setApkChangelogInput(e.target.value)}
+              placeholder="Contoh: Peningkatan akurasi GPS 100Hz, perbaikan bug tampilan timeslip, dan optimasi baterai..."
+              className="w-full px-3 py-2 rounded-lg bg-[#121212] border border-[#2E2E38] text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-[#7C3AED]"
+            />
+          </div>
+
+          {apkSaveStatus && (
+            <div className="p-3 rounded-lg bg-[#7C3AED]/20 border border-[#7C3AED]/40 text-xs text-[#A78BFA] flex items-center gap-2">
+              <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span>{apkSaveStatus}</span>
+            </div>
+          )}
+
+          <div className="flex justify-end pt-2">
+            <button
+              type="submit"
+              disabled={isSavingApk}
+              className="px-5 py-2.5 rounded-lg bg-[#7C3AED] hover:bg-[#6D28D9] text-white text-xs font-bold transition-all shadow-lg shadow-[#7C3AED]/25 cursor-pointer disabled:opacity-50"
+            >
+              {isSavingApk
+                ? 'Menyimpan...'
+                : 'Simpan & Terapkan Update APK ke Seluruh Toko'}
+            </button>
+          </div>
+        </form>
+      </div>
+
       {/* Second Row Configuration: QRIS All Payment + Manual Key Generator */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* 3. QRIS All Payment Image Settings */}
@@ -1435,7 +1643,7 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
               <div className="bg-[#121212] border border-[#2E2E38] rounded-lg p-3 flex items-center justify-center max-h-[48vh] overflow-auto">
                 <img
                   src={selectedProofOrder.paymentProofBase64}
-                  alt={`Screenshot bukti transfer ${
+                  alt={`Foto bukti transfer ${
                     selectedProofOrder.queueNumber || selectedProofOrder.id
                   }`}
                   referrerPolicy="no-referrer"

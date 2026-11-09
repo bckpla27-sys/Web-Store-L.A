@@ -19,6 +19,7 @@ import {
 import { generateApprovalSignature } from './src/utils/security';
 
 dotenv.config();
+process.env.DISABLE_HMR = 'true';
 
 const PORT = 3000;
 const DATA_DIR = path.resolve(process.cwd(), 'data');
@@ -51,6 +52,15 @@ function getInitialState(): PersistedState {
       ownerUsername: 'owner',
       ownerPasswordHash: 'admin123',
       emailSettings: DEFAULT_EMAIL_SETTINGS,
+      apkRelease: {
+        version: 'v2.7.0',
+        fileName: 'DragRaceLA_v2.7_Release.apk',
+        fileSize: '48.6 MB',
+        downloadUrl: '/downloads/DragRaceLA_latest.apk',
+        changelog:
+          'Rilis resmi telemetri sensor GPS presisi tinggi dan video HUD overlay.',
+        updatedAt: Date.now(),
+      },
       updatedAt: Date.now(),
     },
     orders: [],
@@ -450,6 +460,29 @@ async function startServer() {
         ...(state.settings.emailSettings || {}),
         ...(incoming.emailSettings || {}),
       },
+      apkRelease: {
+        version:
+          incoming.apkRelease?.version ||
+          state.settings.apkRelease?.version ||
+          'v2.7.0',
+        fileName:
+          incoming.apkRelease?.fileName ||
+          state.settings.apkRelease?.fileName ||
+          'DragRaceLA_v2.7_Release.apk',
+        fileSize:
+          incoming.apkRelease?.fileSize ||
+          state.settings.apkRelease?.fileSize ||
+          '48.6 MB',
+        downloadUrl:
+          incoming.apkRelease?.downloadUrl ||
+          state.settings.apkRelease?.downloadUrl ||
+          '/downloads/DragRaceLA_latest.apk',
+        changelog:
+          incoming.apkRelease?.changelog !== undefined
+            ? incoming.apkRelease.changelog
+            : state.settings.apkRelease?.changelog || '',
+        updatedAt: Date.now(),
+      },
       updatedAt: Date.now(),
     };
     writePersistedState(state);
@@ -760,6 +793,155 @@ async function startServer() {
     });
   });
 
+  // Dedicated Video Streaming handler with HTTP 206 Range support for mobile/desktop browsers
+  const handleVideoStream = (req: express.Request, res: express.Response) => {
+    const videoCandidates = [
+      path.resolve(process.cwd(), 'public/assets/aistudio/video_fitur_video_809bcad5.mp4'),
+      path.resolve(process.cwd(), 'public/assets/aistudio/video_fitur_video_809bcad5'),
+      path.resolve(process.cwd(), 'dist/assets/aistudio/video_fitur_video_809bcad5.mp4'),
+    ];
+    const videoPath = videoCandidates.find((p) => fs.existsSync(p));
+    if (!videoPath) {
+      res.status(404).send('Video not found');
+      return;
+    }
+
+    const stat = fs.statSync(videoPath);
+    const fileSize = stat.size;
+    const range = req.headers.range;
+
+    if (range) {
+      const parts = range.replace(/bytes=/, '').split('-');
+      const start = parseInt(parts[0], 10);
+      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+
+      if (start >= fileSize) {
+        res.status(416).send(`Requested range not satisfiable\n${start} >= ${fileSize}`);
+        return;
+      }
+
+      const chunksize = end - start + 1;
+      const file = fs.createReadStream(videoPath, { start, end });
+      res.writeHead(206, {
+        'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+        'Accept-Ranges': 'bytes',
+        'Content-Length': chunksize,
+        'Content-Type': 'video/mp4',
+        'Cache-Control': 'public, max-age=3600',
+      });
+      file.pipe(res);
+    } else {
+      res.writeHead(200, {
+        'Content-Length': fileSize,
+        'Content-Type': 'video/mp4',
+        'Accept-Ranges': 'bytes',
+        'Cache-Control': 'public, max-age=3600',
+      });
+      fs.createReadStream(videoPath).pipe(res);
+    }
+  };
+
+  app.get('/api/video/telemetri', handleVideoStream);
+  app.get('/assets/aistudio/video_fitur_video_809bcad5', handleVideoStream);
+  app.get('/assets/aistudio/video_fitur_video_809bcad5.mp4', handleVideoStream);
+
+  // Explicit static file serving for assets folder
+  app.use(
+    '/assets',
+    express.static(path.resolve(process.cwd(), 'public/assets'), {
+      setHeaders: (res, filePath) => {
+        if (filePath.endsWith('.mp4') || filePath.includes('video_fitur_video')) {
+          res.setHeader('Content-Type', 'video/mp4');
+          res.setHeader('Accept-Ranges', 'bytes');
+        } else if (filePath.endsWith('.png')) {
+          res.setHeader('Content-Type', 'image/png');
+        } else if (
+          filePath.endsWith('.jpeg') ||
+          filePath.endsWith('.jpg') ||
+          filePath.includes('gambar_fitur_')
+        ) {
+          res.setHeader('Content-Type', 'image/jpeg');
+        }
+      },
+    })
+  );
+
+  // Dedicated Dynamic Latest APK Download Route (Always auto-updated)
+  app.get(
+    [
+      '/downloads/DragRaceLA_latest.apk',
+      '/downloads/latest.apk',
+      '/api/apk/latest',
+      '/api/apk/download',
+    ],
+    (_req, res) => {
+      const state = readPersistedState();
+      const release = state.settings.apkRelease;
+      const targetUrl = (release?.downloadUrl || '').trim();
+
+      // If owner configured an external direct link (Google Drive, CDN, etc.)
+      if (targetUrl.startsWith('http://') || targetUrl.startsWith('https://')) {
+        return res.redirect(targetUrl);
+      }
+
+      const fileName = release?.fileName || 'DragRaceLA_latest.apk';
+      const candidatePaths = [
+        path.resolve(process.cwd(), 'public/downloads/DragRaceLA_latest.apk'),
+        path.resolve(process.cwd(), 'public/downloads/DragRaceLA_v2.7_Release.apk'),
+      ];
+      const foundPath = candidatePaths.find((p) => fs.existsSync(p));
+
+      if (foundPath) {
+        res.setHeader(
+          'Content-Type',
+          'application/vnd.android.package-archive'
+        );
+        res.setHeader(
+          'Content-Disposition',
+          `attachment; filename="${fileName}"`
+        );
+        return fs.createReadStream(foundPath).pipe(res);
+      }
+
+      const downloadsDir = path.resolve(process.cwd(), 'public/downloads');
+      const files = fs.existsSync(downloadsDir) ? fs.readdirSync(downloadsDir) : [];
+      const anyApk = files.find((f) => f.endsWith('.apk'));
+      if (anyApk) {
+        res.setHeader(
+          'Content-Type',
+          'application/vnd.android.package-archive'
+        );
+        res.setHeader(
+          'Content-Disposition',
+          `attachment; filename="${fileName}"`
+        );
+        return fs.createReadStream(path.join(downloadsDir, anyApk)).pipe(res);
+      }
+
+      res.status(404).send('File APK tidak ditemukan.');
+    }
+  );
+
+  // Explicit static file serving for downloads folder (APK)
+  app.use(
+    '/downloads',
+    express.static(path.resolve(process.cwd(), 'public/downloads'), {
+      setHeaders: (res, filePath) => {
+        const state = readPersistedState();
+        const customFileName = state.settings.apkRelease?.fileName || 'DragRaceLA_Release.apk';
+        if (filePath.endsWith('.apk')) {
+          res.setHeader(
+            'Content-Type',
+            'application/vnd.android.package-archive'
+          );
+          res.setHeader(
+            'Content-Disposition',
+            `attachment; filename="${customFileName}"`
+          );
+        }
+      },
+    })
+  );
 
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({

@@ -1,4 +1,5 @@
 import {
+  ApkReleaseSettings,
   BuyerOrder,
   EmailNotificationSettings,
   GiveawayParticipant,
@@ -32,6 +33,15 @@ export const DEFAULT_EMAIL_SETTINGS: EmailNotificationSettings = {
   emailjsPublicKey: '',
 };
 
+export const DEFAULT_APK_RELEASE: ApkReleaseSettings = {
+  version: 'v2.7.0',
+  fileName: 'DragRaceLA_v2.7_Release.apk',
+  fileSize: '48.6 MB',
+  downloadUrl: '/downloads/DragRaceLA_latest.apk',
+  changelog: 'Rilis resmi telemetri sensor GPS presisi tinggi dan video HUD overlay.',
+  updatedAt: Date.now(),
+};
+
 export const DEFAULT_STORE_SETTINGS: StoreSettings = {
   danaNumber: '081264659643',
   danaAccountName: 'dragrace27',
@@ -40,6 +50,7 @@ export const DEFAULT_STORE_SETTINGS: StoreSettings = {
   ownerUsername: 'owner',
   ownerPasswordHash: 'admin123',
   emailSettings: DEFAULT_EMAIL_SETTINGS,
+  apkRelease: DEFAULT_APK_RELEASE,
   updatedAt: Date.now(),
 };
 
